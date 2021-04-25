@@ -180,6 +180,9 @@ class Ui(QFrame):
         for event in self.events:
             self.build_event(event)
 
+        self.refresh_size()
+
+    def refresh_size(self):
         size = self.header_layout.sizeHint()
         available_size = self.screen().availableSize()
         size.setWidth(min(size.width(), available_size.width()))

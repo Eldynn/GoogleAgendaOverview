@@ -7,22 +7,18 @@ from main import APPDATA
 
 def clear_layout(layout):
     while layout.count():
-        child = layout.takeAt(0)
-
-        if child.layout():
-            clear_layout(child.layout())
-
-        if child.widget():
-            child.widget().deleteLater()
+        clear_widget(layout.takeAt(0))
 
 
-# def minimum_digits(number, minimum, custom, char):
-#     string = str(number)
-#     length = len(string)
-#     if length < minimum:
-#         return custom.format(string, char * (minimum - length))
-#     else:
-#         return string
+def clear_widget(item):
+    if hasattr(item, 'timer'):
+        item.timer.stop()
+
+    if item.layout():
+        clear_layout(item.layout())
+
+    if hasattr(item, 'widget') and item.widget():
+        item.widget().deleteLater()
 
 
 def except_hook(cls, exception, traceback):

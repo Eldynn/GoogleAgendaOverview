@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel
 
 from main import DATETIME_FORMAT
+from src.utilities import clear_widget
 
 
 class Event(QWidget):
@@ -81,14 +82,19 @@ class Event(QWidget):
         self.countdown()
 
     # TODO: Add ui effects for countdown close to end
-    # TODO: If event is finished then refresh
+    # TODO: Start timer inside countdown and update timer trigger duration their
     def countdown(self):
         now = self.start.today()
         now = now.astimezone(datetime.datetime.now().astimezone().tzinfo)
 
         count_from = self.start
         if now > self.start:
-            count_from = self.end
+            if now > self.end:
+                clear_widget(self)
+                self.parent.refresh()
+                return
+            else:
+                count_from = self.end
 
         seconds = (count_from - now).total_seconds()
 
@@ -103,6 +109,6 @@ class Event(QWidget):
             seconds -= minutes * 60
             result += '{0}m'.format(minutes)
         else:
-            result = '{0}s'.format(seconds)
+            result = '{0}s'.format(int(seconds))
 
         self.timer_label.setText(result)
