@@ -24,6 +24,11 @@ class Event(QWidget):
 
         self.setup_ui()
 
+    # TODO: Use google event data to style the ui (colors, transparency, visibility)
+    # TODO: Let user customize which information to show
+    # TODO: When printing email or name if it is the current user, display a custom string like "You" instead
+    # TODO: Do something with attachments?
+    # TODO: Do something with attendees? (How to handle big list? Don't and display ellipsis? How to detect?)
     def setup_ui(self):
         self.setProperty('class', 'event')
         self.setContentsMargins(5, 5, 5, 5)
@@ -54,17 +59,7 @@ class Event(QWidget):
         duration.setMinimumWidth(120)
         layout.addWidget(duration)
 
-        # TODO: Add to the QLabel an ellipsis when text is too long
-        summary_text = self.data['summary']
-        summary = QLabel(
-            '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + summary_text + '</a>'
-        )
-        summary.setToolTip(summary_text)
-        summary.setOpenExternalLinks(True)
-        summary.setFixedWidth(200)
-        layout.addWidget(summary)
-
-        # TODO: Add icon link to conference
+        self.setup_summary(layout)
 
         self.timer_label = QLabel()
         self.timer_label.setAlignment(Qt.AlignRight)
@@ -78,10 +73,54 @@ class Event(QWidget):
         self.timer.timeout.connect(self.timeout)
         self.timer.start(1000)
 
+    # TODO: Display pretty date
+    def setup_summary(self, layout):
+        # TODO: Add to the QLabel an ellipsis when text is too long
+        text = self.data['summary']
+        summary = QLabel(
+            '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + text + '</a>'
+        )
+
+        if 'organizer' in self.data:
+            text += '\n\nOrganizer:'
+            if 'displayName' in self.data['organizer']:
+                text += ' "{0}"'.format(self.data['organizer']['displayName'])
+
+            if 'email' in self.data['organizer']:
+                text += ' <{0}>'.format(self.data['organizer']['email'])
+
+        if 'location' in self.data:
+            text += '\nLocation: ' + self.data['location']
+
+        # TODO: Handle HTML inside description
+        if 'description' in self.data:
+            text += '\nDescription: ' + self.data['description']
+
+        event_type_text = {
+            'default': 'Regular',
+            'outOfOffice': 'Out-of-office',
+        }
+        text += '\n\nEvent type: ' + event_type_text[self.data['eventType']]
+
+        text += '\nCreated at: ' + self.data['created']
+        if 'creator' in self.data:
+            text += ' By'
+            if 'displayName' in self.data['creator']:
+                text += ' "{0}"'.format(self.data['creator']['displayName'])
+
+            if 'email' in self.data['creator']:
+                text += ' <{0}>'.format(self.data['creator']['email'])
+        text += '\nLast modification: ' + self.data['updated']
+
+        summary.setToolTip(text)
+        summary.setOpenExternalLinks(True)
+        summary.setFixedWidth(200)
+        layout.addWidget(summary)
+
     def timeout(self):
         self.countdown()
 
-    # TODO: Add ui effects for countdown close to end
+    # TODO: Add ui effects for countdown close to end (maybe use Google event data reminders)
     # TODO: Start timer inside countdown and update timer trigger duration their
     def countdown(self):
         now = self.start.today()
