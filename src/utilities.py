@@ -21,6 +21,12 @@ def clear_widget(item):
         item.widget().deleteLater()
 
 
+def handle_error(message):
+    now = datetime.datetime.utcnow().isoformat() + 'Z'
+    with open(path.join(APPDATA, 'errors.log'), 'a') as file:
+        file.write('[{0}] {1}'.format(now, message))
+
+
 def except_hook(cls, exception, traceback):
     now = datetime.datetime.utcnow().isoformat() + 'Z'
     message = '[{0}] type: {1}\n[{0}] exception: {2}\n[{0}] traceback: {3}\n'.format(now, cls, exception, traceback)

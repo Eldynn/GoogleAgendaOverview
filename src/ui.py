@@ -1,8 +1,11 @@
 import datetime
 import os.path
 from os import path
+from urllib.error import URLError, HTTPError, ContentTooShortError
+from urllib.request import urlopen
 
 from PyQt5.QtCore import Qt, QMetaObject, QSettings
+from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import QFrame, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLayout
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -12,7 +15,7 @@ from googleapiclient.discovery import build
 from main import APPDATA, SCOPES, NAME
 from src.event import Event
 from src.header import Header
-from src.utilities import clear_layout
+from src.utilities import clear_layout, handle_error
 
 
 class Ui(QFrame):
@@ -35,6 +38,7 @@ class Ui(QFrame):
 
     calendars = []
     events = []
+    icons = {}
 
     def __init__(self):
         super(Ui, self).__init__(None, self.flags)
@@ -49,6 +53,7 @@ class Ui(QFrame):
 
         self.setFrameShape(QFrame.StyledPanel)
 
+        # TODO: QPushButton[iconOnly="True"] should be circle button
         css = """
         QFrame {
             background-color: white;
@@ -60,6 +65,10 @@ class Ui(QFrame):
             border-radius: 5px;
             padding: 10px 20px;
             min-width: 50px;
+        }
+        QPushButton[iconOnly="True"] {
+            padding: 10px;
+            min-width: unset;
         }
         QPushButton:hover {
             background-color: #5C6BC0;
@@ -159,10 +168,6 @@ class Ui(QFrame):
 
         self.refresh()
 
-    def build_event(self, event):
-        event_widget = Event(self, event)
-        self.events_layout.addWidget(event_widget)
-
     # TODO: Subscribe to changes or poll each 15m
     # TODO: Store when the last refresh happened to prevent unnecessary refresh when event end and send a refresh
     def refresh(self):
@@ -179,7 +184,7 @@ class Ui(QFrame):
         clear_layout(self.events_layout)
 
         for event in self.events:
-            self.build_event(event)
+            self.events_layout.addWidget(Event(self, event))
 
         self.refresh_size()
 
@@ -190,6 +195,26 @@ class Ui(QFrame):
         size.setHeight(min(size.height(), available_size.height()))
 
         self.setFixedSize(size)
+
+    # TODO: If fail to fetch an uri for X times, find a way to limit future try or stop trying
+    # TODO: Store & restore on drive
+    def fetch_icon(self, uri):
+        if uri in self.icons:
+            return self.icons[uri]
+        else:
+            try:
+                data = urlopen(uri).read()  # TODO: Investigate on .read() raised exceptions
+            except (URLError, HTTPError, ContentTooShortError) as exception:
+                handle_error(exception)
+                return None
+
+            pixmap = QPixmap()
+            pixmap.loadFromData(data)
+
+            icon = QIcon(pixmap)
+            self.icons[uri] = icon
+
+            return icon
 
     @staticmethod
     def paged_query(func, *args, **kwargs):

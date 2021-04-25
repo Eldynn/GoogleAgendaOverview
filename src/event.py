@@ -1,7 +1,8 @@
 import datetime
+from webbrowser import open
 
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QPushButton
 
 from main import DATETIME_FORMAT
 from src.utilities import clear_widget
@@ -60,6 +61,7 @@ class Event(QWidget):
         layout.addWidget(duration)
 
         self.setup_summary(layout)
+        self.setup_conference(layout)
 
         self.timer_label = QLabel()
         self.timer_label.setAlignment(Qt.AlignRight)
@@ -116,6 +118,45 @@ class Event(QWidget):
         summary.setOpenExternalLinks(True)
         summary.setFixedWidth(200)
         layout.addWidget(summary)
+
+    # TODO: Handle more type of conference (phone, sip, more)
+    # TODO: Fix the alignment (When row contain conference and others don't)
+    def setup_conference(self, layout):
+        if 'conferenceData' not in self.data:
+            return
+
+        conference_data = self.data['conferenceData']
+        conference_data_solution = conference_data['conferenceSolution']
+        for entrypoint in conference_data['entryPoints']:
+            if entrypoint['entryPointType'] != 'video':
+                continue
+
+            conference = QPushButton()
+            conference.setProperty('class', 'video')
+            uri = entrypoint['uri']
+            conference.clicked.connect(lambda: open(uri))
+
+            icon = self.parent.fetch_icon(conference_data_solution['iconUri'])
+            tooltip = conference_data_solution['name']
+            label = tooltip
+            if 'label' in entrypoint and not uri.endswith(entrypoint['label']):
+                label = entrypoint['label']
+
+            text = ''
+            if icon:
+                conference.setProperty('iconOnly', 'True')
+                conference.setIcon(icon)
+            else:
+                text = label
+
+            conference.setText(text)
+
+            # TODO: Handle HTML in tooltip
+            if 'notes' in conference_data:
+                tooltip += '\n\nNotes: {0}'.format(conference_data['notes'])
+            conference.setToolTip(tooltip)
+
+            layout.addWidget(conference)
 
     def timeout(self):
         self.countdown()
