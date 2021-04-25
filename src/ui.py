@@ -2,14 +2,14 @@ import datetime
 import os.path
 from os import path
 
-from PyQt5.QtCore import Qt, QMetaObject
+from PyQt5.QtCore import Qt, QMetaObject, QSettings
 from PyQt5.QtWidgets import QFrame, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from main import APPDATA, SCOPES
+from main import APPDATA, SCOPES, NAME
 from src.event import Event
 from src.header import Header
 from src.utilities import clear_layout
@@ -17,6 +17,7 @@ from src.utilities import clear_layout
 
 class Ui(QFrame):
     flags = Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+    settings = None
 
     header = None
     body = None
@@ -39,6 +40,12 @@ class Ui(QFrame):
         super(Ui, self).__init__(None, self.flags)
 
         self.authorize()
+
+        self.settings = QSettings(NAME, NAME)
+
+        geometry = self.settings.value('geometry')
+        if geometry:
+            self.restoreGeometry(geometry)
 
         self.setFrameShape(QFrame.StyledPanel)
 
@@ -93,6 +100,9 @@ class Ui(QFrame):
 
         self.setup_ui()
 
+    def closeEvent(self, event):
+        self.settings.setValue('geometry', self.saveGeometry())
+
     def mousePressEvent(self, event):
         self.old_position = event.pos()
         self.mouse_down = event.button() == Qt.LeftButton
@@ -124,8 +134,8 @@ class Ui(QFrame):
             self.authorize()
             self.refresh()
 
+    # TODO: Make events layout scrollable
     def setup_ui(self):
-        # TODO: make events layout scrollable
         self.column_layout = QVBoxLayout(self.body)
         self.column_layout.setSpacing(15)
 
