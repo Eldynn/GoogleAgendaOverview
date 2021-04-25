@@ -3,7 +3,7 @@ import os.path
 from os import path
 
 from PyQt5.QtCore import Qt, QMetaObject, QSettings
-from PyQt5.QtWidgets import QFrame, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt5.QtWidgets import QFrame, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLayout
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -87,9 +87,10 @@ class Ui(QFrame):
         self.body.setStyleSheet(css)
 
         self.header_layout = QVBoxLayout(self)
-        self.header_layout.addWidget(self.header)
+        self.header_layout.setSizeConstraint(QLayout.SetFixedSize)
         self.header_layout.setContentsMargins(0, 0, 0, 0)
         self.header_layout.setSpacing(0)
+        self.header_layout.addWidget(self.header)
 
         body_layout = QVBoxLayout()
         body_layout.addWidget(self.body)
@@ -214,6 +215,7 @@ class Ui(QFrame):
 
         return events.get('nextPageToken')
 
+    # TODO: Let user choose which calendar the want to fetch events from
     def refresh_calendars(self, page_token):
         calendar_list = self.service.calendarList().list(
             pageToken=page_token,
