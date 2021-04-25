@@ -80,12 +80,17 @@ class Event(QWidget):
     def timeout(self):
         self.countdown()
 
-    # TODO: If event started then count the time before it end
+    # TODO: Add ui effects for countdown close to end
     # TODO: If event is finished then refresh
     def countdown(self):
         now = self.start.today()
         now = now.astimezone(datetime.datetime.now().astimezone().tzinfo)
-        seconds = (self.start - now).total_seconds()
+
+        count_from = self.start
+        if now > self.start:
+            count_from = self.end
+
+        seconds = (count_from - now).total_seconds()
 
         result = ''
         if seconds >= 3600:
