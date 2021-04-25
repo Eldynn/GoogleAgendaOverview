@@ -1,15 +1,19 @@
 import datetime
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel
 
 from main import DATETIME_FORMAT
-from src.utilities import minimum_digits
 
 
 class Event(QWidget):
     parent = None
     data = None
+
+    timer = None
+    timer_label = None
+    start = None
+    end = None
 
     def __init__(self, parent, event):
         super(Event, self).__init__()
@@ -32,26 +36,68 @@ class Event(QWidget):
 
         layout = QHBoxLayout()
 
-        start = datetime.datetime.strptime(self.data['start']['dateTime'], DATETIME_FORMAT)
-        end = datetime.datetime.strptime(self.data['end']['dateTime'], DATETIME_FORMAT)
-
-        seconds = (end - start).total_seconds()
-        delta = '%sm' % (int(seconds / 60))
+        self.start = datetime.datetime.strptime(self.data['start']['dateTime'], DATETIME_FORMAT)
+        self.end = datetime.datetime.strptime(self.data['end']['dateTime'], DATETIME_FORMAT)
+        seconds = (self.end - self.start).total_seconds()
+        delta = ''
         if seconds >= 3600:
             hours = int(seconds // 3600)
-            minutes = int((seconds / 60) % 60)
-            if hours and minutes:
-                delta = '%s:%s' % (minimum_digits(hours, 2, '{1}{0}', '0'), minimum_digits(minutes, 2, '{1}{0}', '0'))
-            elif hours:
-                delta = '%sh' % hours
+            seconds -= hours * 3600
+            delta = '{0}h'.format(hours)
 
-        duration = QLabel('%s - %s (%s)' % (start.strftime("%H:%M"), end.strftime("%H:%M"), delta))
+        if seconds >= 60:
+            minutes = int((seconds // 60) % 60)
+            delta += '{0}m'.format(minutes)
+
+        duration = QLabel('%s - %s (%s)' % (self.start.strftime("%H:%M"), self.end.strftime("%H:%M"), delta))
         duration.setMinimumWidth(120)
         layout.addWidget(duration)
 
+        # TODO: Add to the QLabel an ellipsis when text is too long
+        summary_text = self.data['summary']
         summary = QLabel(
-            '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + self.data['summary'] + '</a>')
+            '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + summary_text + '</a>'
+        )
+        summary.setToolTip(summary_text)
         summary.setOpenExternalLinks(True)
+        summary.setFixedWidth(200)
         layout.addWidget(summary)
 
+        # TODO: Add icon link to conference
+
+        self.timer_label = QLabel()
+        self.timer_label.setAlignment(Qt.AlignRight)
+        self.timer_label.setFixedWidth(50)
+        self.countdown()
+        layout.addWidget(self.timer_label)
+
         self.setLayout(layout)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.timeout)
+        self.timer.start(1000)
+
+    def timeout(self):
+        self.countdown()
+
+    # TODO: If event started then count the time before it end
+    # TODO: If event is finished then refresh
+    def countdown(self):
+        now = self.start.today()
+        now = now.astimezone(datetime.datetime.now().astimezone().tzinfo)
+        seconds = (self.start - now).total_seconds()
+
+        result = ''
+        if seconds >= 3600:
+            hours = int(seconds // 3600)
+            seconds -= hours * 3600
+            result = '{0}h'.format(hours)
+
+        if seconds >= 60:
+            minutes = int((seconds // 60) % 60)
+            seconds -= minutes * 60
+            result += '{0}m'.format(minutes)
+        else:
+            result = '{0}s'.format(seconds)
+
+        self.timer_label.setText(result)

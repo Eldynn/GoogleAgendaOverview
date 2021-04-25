@@ -152,12 +152,14 @@ class Ui(QFrame):
         event_widget = Event(self, event)
         self.events_layout.addWidget(event_widget)
 
+    # TODO: Subscribe to changes or poll each 15m
+    # TODO: Store when the last refresh happened to prevent unnecessary refresh when event end and send a refresh
     def refresh(self):
         self.calendars = []
         self.paged_query(self.refresh_calendars)
 
         self.events = []
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.utcnow()  # TODO: Do we need to use a specific timezone?
         time_min = now.isoformat() + 'Z'
         time_max = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat() + 'Z'
         for calendar in self.calendars:

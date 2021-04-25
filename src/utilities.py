@@ -16,13 +16,13 @@ def clear_layout(layout):
             child.widget().deleteLater()
 
 
-def minimum_digits(number, minimum, custom, char):
-    string = str(number)
-    length = len(string)
-    if length < minimum:
-        return custom.format(string, char * (minimum - length))
-    else:
-        return string
+# def minimum_digits(number, minimum, custom, char):
+#     string = str(number)
+#     length = len(string)
+#     if length < minimum:
+#         return custom.format(string, char * (minimum - length))
+#     else:
+#         return string
 
 
 def except_hook(cls, exception, traceback):
