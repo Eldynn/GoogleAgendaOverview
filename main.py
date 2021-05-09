@@ -3,7 +3,8 @@ from __future__ import print_function
 import sys
 from os import path, environ, mkdir
 
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/calendar.events.readonly']
 DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S%z'
 NAME = 'Today Overview'
 

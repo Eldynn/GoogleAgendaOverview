@@ -16,6 +16,9 @@ class Event(QWidget):
     timer_label = None
     start = None
     end = None
+    responseStatus = None
+
+    optional = False
 
     def __init__(self, parent, event):
         super(Event, self).__init__()
@@ -31,7 +34,19 @@ class Event(QWidget):
     # TODO: Do something with attachments?
     # TODO: Do something with attendees? (How to handle big list? Don't and display ellipsis? How to detect?)
     def setup_ui(self):
-        self.setProperty('class', 'event')
+        classes = ['event']
+        if 'attendees' in self.data and self.data['attendees'][0]:
+            you = self.data['attendees'][0]
+            if 'responseStatus' in you:
+                self.responseStatus = you['responseStatus']
+                classes.append(self.responseStatus)
+
+            if 'optional' in you and you['optional']:
+                self.optional = True
+                classes.append('optional')
+
+        self.setProperty('class', ' '.join(classes))
+
         self.setContentsMargins(5, 5, 5, 5)
         self.setAttribute(Qt.WA_StyledBackground, True)
 
@@ -78,7 +93,17 @@ class Event(QWidget):
     # TODO: Display pretty date
     def setup_summary(self, layout):
         # TODO: Add to the QLabel an ellipsis when text is too long
-        text = self.data['summary']
+
+        text = ''
+        if self.optional:
+            text += '[optional]'
+
+        if self.responseStatus == 'tentative':
+            text += '[tentative]'
+
+        if len(text):
+            text += ' '
+        text += self.data['summary']
         summary = QLabel(
             '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + text + '</a>'
         )
@@ -103,6 +128,14 @@ class Event(QWidget):
             'outOfOffice': 'Out-of-office',
         }
         text += '\n\nEvent type: ' + event_type_text[self.data['eventType']]
+
+        text += '\nOptional: ' + str(self.optional)
+
+        text += '\nResponse status: '
+        if self.responseStatus is None:
+            text += 'Unknown'
+        else:
+            text += self.responseStatus
 
         text += '\nCreated at: ' + self.data['created']
         if 'creator' in self.data:

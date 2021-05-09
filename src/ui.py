@@ -7,6 +7,7 @@ from urllib.request import urlopen
 from PyQt5.QtCore import Qt, QMetaObject, QSettings
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import QFrame, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLayout
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -84,13 +85,18 @@ class Ui(QFrame):
         QWidget {
             border: 0;
         }
-        QWidget[class="event"] {
+        QWidget[class~="event"] {
             background-color: #7986CB;
             border-radius: 5px;
         }
-        QWidget[class="event"] QLabel {
+        QWidget[class~="event"] QLabel {
             background-color: #7986CB;
             color: white;
+        }
+        QWidget[class~="needsAction"] {
+            border-bottom: 5px Solid #304FFE;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
         }
         """
         self.body.setStyleSheet(css)
@@ -126,7 +132,12 @@ class Ui(QFrame):
 
         if not self.credentials or not self.credentials.valid:
             if self.credentials and self.credentials.expired and self.credentials.refresh_token:
-                self.credentials.refresh(Request())
+                try:
+                    self.credentials.refresh(Request())
+                except RefreshError:
+                    os.remove(self.token_path)
+                    self.credentials = None
+                    return self.authorize()
             else:
                 flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
                 self.credentials = flow.run_local_server(port=0)
@@ -233,10 +244,18 @@ class Ui(QFrame):
             timeMax=time_max,
             orderBy='startTime',
             pageToken=page_token,
-            maxAttendees=1
+            maxAttendees=1,
+            showDeleted=False
         ).execute()
 
-        self.events += events['items']
+        def remove_declined_event(event):
+            if 'attendees' in event and event['attendees'][0]:
+                if event['attendees'][0]['responseStatus'] == 'declined':
+                    return False
+
+            return True
+
+        self.events += filter(remove_declined_event, events['items'])
 
         return events.get('nextPageToken')
 
