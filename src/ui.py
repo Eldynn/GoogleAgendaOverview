@@ -94,14 +94,17 @@ class Ui(QFrame):
             color: white;
         }
         QWidget[class~="needsAction"] {
-            border-bottom: 5px Solid #304FFE;
-            border-bottom-left-radius: 0;
-            border-bottom-right-radius: 0;
+            border-top: 5px Solid #304FFE;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
         }
         QWidget[class~="event"] QLabelClickable {
             color: #3949AB;
             font-weight: bold;
             text-decoration: underline;
+        }
+        QProgressBar {
+            background-color: #7986CB;
         }
         """
         self.body.setStyleSheet(css)

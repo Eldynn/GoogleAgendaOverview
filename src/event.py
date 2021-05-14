@@ -3,7 +3,8 @@ from webbrowser import open
 
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QUrl
 from PyQt5.QtGui import QDesktopServices, QCursor
-from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, \
+    QProgressBar
 
 from main import DATETIME_FORMAT
 from src.utilities import clear_widget
@@ -27,8 +28,8 @@ class Event(QWidget):
     def __init__(self, parent, event):
         super(Event, self).__init__()
 
-        self.parent = None
-        self.data = None
+        self.parent = parent
+        self.data = event
 
         self.timer = None
         self.timer_label = None
@@ -38,9 +39,8 @@ class Event(QWidget):
 
         self.classes = ['event']
         self.optional = False
-
-        self.parent = parent
-        self.data = event
+        self.vertical_layout = None
+        self.progress_bar = None
 
         self.setup_ui()
 
@@ -48,7 +48,7 @@ class Event(QWidget):
     # TODO: Let user customize which information to show
     # TODO: When printing email or name if it is the current user, display a custom string like "You" instead
     # TODO: Do something with attachments?
-    # TODO: Do something with attendees? (How to handle big list? Don't and display ellipsis? How to detect?)
+    # TODO: Do something with attendees? (idea: button, fetch list onclick)
     def setup_ui(self):
         if 'attendees' in self.data and self.data['attendees'][0]:
             you = self.data['attendees'][0]
@@ -62,16 +62,20 @@ class Event(QWidget):
 
         self.setProperty('class', ' '.join(self.classes))
 
-        self.setContentsMargins(5, 5, 5, 5)
         self.setAttribute(Qt.WA_StyledBackground, True)
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
-        shadow.setXOffset(2)
+        shadow.setXOffset(0)
         shadow.setYOffset(2)
         self.setGraphicsEffect(shadow)
 
-        layout = QHBoxLayout()
+        self.vertical_layout = QVBoxLayout()
+        self.vertical_layout.setContentsMargins(0, 5, 0, 0)
+        self.vertical_layout.setSpacing(0)
+        horizontal_layout = QHBoxLayout()
+        horizontal_layout.setContentsMargins(10, 10, 10, 10)
+        self.vertical_layout.addLayout(horizontal_layout)
 
         self.start = datetime.datetime.strptime(self.data['start']['dateTime'], DATETIME_FORMAT)
         self.end = datetime.datetime.strptime(self.data['end']['dateTime'], DATETIME_FORMAT)
@@ -88,18 +92,18 @@ class Event(QWidget):
 
         duration = QLabel('%s - %s (%s)' % (self.start.strftime("%H:%M"), self.end.strftime("%H:%M"), delta))
         duration.setMinimumWidth(120)
-        layout.addWidget(duration)
+        horizontal_layout.addWidget(duration)
 
-        self.setup_summary(layout)
-        self.setup_conference(layout)
+        self.setup_summary(horizontal_layout)
+        self.setup_conference(horizontal_layout)
 
         self.timer_label = QLabel()
-        self.timer_label.setAlignment(Qt.AlignRight)
+        self.timer_label.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
         self.timer_label.setFixedWidth(50)
         self.countdown()
-        layout.addWidget(self.timer_label)
+        horizontal_layout.addWidget(self.timer_label)
 
-        self.setLayout(layout)
+        self.setLayout(self.vertical_layout)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.timeout)
@@ -212,8 +216,14 @@ class Event(QWidget):
     def timeout(self):
         self.countdown()
 
-    def started(self):
+    def started(self, seconds):
         self.classes.append('in_progress')
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(5)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setRange(0, seconds)
+        self.vertical_layout.addWidget(self.progress_bar)
 
     # TODO: Add ui effects for countdown close to end (maybe use Google event data reminders)
     # TODO: Start timer inside countdown and update timer trigger duration their
@@ -228,10 +238,12 @@ class Event(QWidget):
                 self.parent.refresh()
                 return
             else:
-                if 'in_progress' not in self.classes:
-                    self.started()
-
                 count_from = self.end
+
+                if 'in_progress' not in self.classes:
+                    self.started((self.end - self.start).total_seconds())
+
+                self.progress_bar.setValue((now - self.start).total_seconds())
 
         self.setProperty('class', ' '.join(self.classes))
 
