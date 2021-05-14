@@ -1,27 +1,43 @@
 import datetime
 from webbrowser import open
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QUrl
+from PyQt5.QtGui import QDesktopServices, QCursor
 from PyQt5.QtWidgets import QWidget, QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QPushButton
 
 from main import DATETIME_FORMAT
 from src.utilities import clear_widget
 
 
+class QLabelClickable(QLabel):
+    clicked = pyqtSignal()
+
+    def __init__(self, *args, **kwargs):
+        super(QLabel, self).__init__(*args, **kwargs)
+
+        self.setCursor(QCursor(Qt.PointingHandCursor))
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            # noinspection PyUnresolvedReferences
+            self.clicked.emit()
+
+
 class Event(QWidget):
-    parent = None
-    data = None
-
-    timer = None
-    timer_label = None
-    start = None
-    end = None
-    responseStatus = None
-
-    optional = False
-
     def __init__(self, parent, event):
         super(Event, self).__init__()
+
+        self.parent = None
+        self.data = None
+
+        self.timer = None
+        self.timer_label = None
+        self.start = None
+        self.end = None
+        self.responseStatus = None
+
+        self.classes = ['event']
+        self.optional = False
 
         self.parent = parent
         self.data = event
@@ -34,18 +50,17 @@ class Event(QWidget):
     # TODO: Do something with attachments?
     # TODO: Do something with attendees? (How to handle big list? Don't and display ellipsis? How to detect?)
     def setup_ui(self):
-        classes = ['event']
         if 'attendees' in self.data and self.data['attendees'][0]:
             you = self.data['attendees'][0]
             if 'responseStatus' in you:
                 self.responseStatus = you['responseStatus']
-                classes.append(self.responseStatus)
+                self.classes.append(self.responseStatus)
 
             if 'optional' in you and you['optional']:
                 self.optional = True
-                classes.append('optional')
+                self.classes.append('optional')
 
-        self.setProperty('class', ' '.join(classes))
+        self.setProperty('class', ' '.join(self.classes))
 
         self.setContentsMargins(5, 5, 5, 5)
         self.setAttribute(Qt.WA_StyledBackground, True)
@@ -90,6 +105,9 @@ class Event(QWidget):
         self.timer.timeout.connect(self.timeout)
         self.timer.start(1000)
 
+    def open_link(self):
+        QDesktopServices.openUrl(QUrl(self.data['htmlLink']))
+
     # TODO: Display pretty date
     def setup_summary(self, layout):
         # TODO: Add to the QLabel an ellipsis when text is too long
@@ -104,9 +122,9 @@ class Event(QWidget):
         if len(text):
             text += ' '
         text += self.data['summary']
-        summary = QLabel(
-            '<a style="color: #3949AB" href="' + self.data['htmlLink'] + '">' + text + '</a>'
-        )
+        summary = QLabelClickable(text)
+        # noinspection PyUnresolvedReferences
+        summary.clicked.connect(self.open_link)
 
         if 'organizer' in self.data:
             text += '\n\nOrganizer:'
@@ -194,11 +212,14 @@ class Event(QWidget):
     def timeout(self):
         self.countdown()
 
+    def started(self):
+        self.classes.append('in_progress')
+
     # TODO: Add ui effects for countdown close to end (maybe use Google event data reminders)
     # TODO: Start timer inside countdown and update timer trigger duration their
     def countdown(self):
-        now = self.start.today()
-        now = now.astimezone(datetime.datetime.now().astimezone().tzinfo)
+        now = datetime.datetime.now()
+        now = now.astimezone(self.start.tzinfo)
 
         count_from = self.start
         if now > self.start:
@@ -207,7 +228,12 @@ class Event(QWidget):
                 self.parent.refresh()
                 return
             else:
+                if 'in_progress' not in self.classes:
+                    self.started()
+
                 count_from = self.end
+
+        self.setProperty('class', ' '.join(self.classes))
 
         seconds = (count_from - now).total_seconds()
 

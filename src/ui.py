@@ -98,6 +98,11 @@ class Ui(QFrame):
             border-bottom-left-radius: 0;
             border-bottom-right-radius: 0;
         }
+        QWidget[class~="event"] QLabelClickable {
+            color: #3949AB;
+            font-weight: bold;
+            text-decoration: underline;
+        }
         """
         self.body.setStyleSheet(css)
 
