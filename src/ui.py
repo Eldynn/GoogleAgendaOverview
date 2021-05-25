@@ -203,7 +203,8 @@ class Ui(QFrame):
         clear_layout(self.events_layout)
 
         for event in self.events:
-            self.events_layout.addWidget(Event(self, event))
+            if 'dateTime' in event['start'] and 'dateTime' in event['end']:
+                self.events_layout.addWidget(Event(self, event))
 
         self.refresh_size()
 
