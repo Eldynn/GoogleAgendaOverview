@@ -259,7 +259,8 @@ class Event(QWidget):
             minutes = int((seconds // 60) % 60)
             seconds -= minutes * 60
             result += '{0}m'.format(minutes)
-        else:
+
+        if len(result) == 0:
             result = '{0}s'.format(int(seconds))
 
         self.timer_label.setText(result)
